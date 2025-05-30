@@ -102,6 +102,80 @@ public class DatabaseService
         await command.ExecuteNonQueryAsync();
     }
 
+    public async Task SumarMacronutrientesAUsuario(string usuario, Alimento consumo)
+    {
+        try
+        {
+            using var connection = new MySqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            // Obtener datos actuales del usuario desde la tabla macronutrientes
+            var selectCmd = connection.CreateCommand();
+            selectCmd.CommandText = @"SELECT Calorias, Grasas, Hidratos, Proteinas FROM macronutrientes WHERE Usuario = @usuario";
+            selectCmd.Parameters.AddWithValue("@usuario", usuario);
+
+            using var reader = await selectCmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                Console.WriteLine($"⚠️ Usuario '{usuario}' no encontrado en la tabla macronutrientes.");
+                return;
+            }
+
+            // Parsear datos existentes
+            float caloriasActuales = reader.GetFloat(0);
+            float grasas = reader.GetFloat(1);
+            float hidratos = reader.GetFloat(2);
+            float proteinas = reader.GetFloat(3);
+
+            Console.WriteLine($"🔍 Datos actuales del usuario '{usuario}' en tabla macronutrientes:");
+            Console.WriteLine($"Calorías: {caloriasActuales}, Grasas: {grasas}, Hidratos: {hidratos}, Proteínas: {proteinas}");
+
+            // Sumar los consumos
+            float nuevasCalorias = caloriasActuales + consumo.Kcal;
+            float nuevasGrasas = grasas + consumo.Grasas;
+            float nuevosHidratos = hidratos + consumo.Hidratos;
+            float nuevasProteinas = proteinas + consumo.Proteinas;
+
+            Console.WriteLine("➕ Suma del consumo:");
+            Console.WriteLine($"Kcal: {consumo.Kcal}, Grasas: {consumo.Grasas}, Hidratos: {consumo.Hidratos}, Proteínas: {consumo.Proteinas}");
+
+            Console.WriteLine("📈 Nuevos valores:");
+            Console.WriteLine($"Calorías: {nuevasCalorias}, Grasas: {nuevasGrasas}, Hidratos: {nuevosHidratos}, Proteínas: {nuevasProteinas}");
+
+            // Cerrar el reader antes de ejecutar un nuevo comando
+            await reader.CloseAsync();
+
+            // Actualizar los datos en la tabla macronutrientes
+            var updateCmd = connection.CreateCommand();
+            updateCmd.CommandText = @"
+            UPDATE macronutrientes 
+            SET Calorias = @calorias, Grasas = @grasas, Hidratos = @hidratos, Proteinas = @proteinas
+            WHERE Usuario = @usuario";
+            updateCmd.Parameters.AddWithValue("@calorias", nuevasCalorias);
+            updateCmd.Parameters.AddWithValue("@grasas", nuevasGrasas);
+            updateCmd.Parameters.AddWithValue("@hidratos", nuevosHidratos);
+            updateCmd.Parameters.AddWithValue("@proteinas", nuevasProteinas);
+            updateCmd.Parameters.AddWithValue("@usuario", usuario);
+
+            int filasAfectadas = await updateCmd.ExecuteNonQueryAsync();
+            if (filasAfectadas == 0)
+            {
+                Console.WriteLine("⚠️ No se actualizó ninguna fila. Verifica si el usuario existe en la tabla macronutrientes.");
+            }
+            else
+            {
+                Console.WriteLine($"✅ Macronutrientes actualizados correctamente para '{usuario}' en tabla macronutrientes. Filas afectadas: {filasAfectadas}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error al sumar macronutrientes: {ex.Message}");
+        }
+    }
+
+
+
+
 
     public async Task<Usuario?> ObtenerUsuarioAsync(string nombre)
     {
@@ -184,7 +258,7 @@ public class DatabaseService
             return new Macronutrientes
             {
                 Usuario = reader.GetString("usuario"),
-                Calorias = reader.GetString("calorias"),
+                Calorias = reader.GetFloat("calorias"),
                 Grasas = reader.GetFloat("grasas"),
                 Hidratos = reader.GetFloat("hidratos"),
                 Proteinas = reader.GetFloat("proteinas")

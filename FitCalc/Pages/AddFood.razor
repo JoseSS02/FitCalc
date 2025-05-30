@@ -2,9 +2,9 @@
 @page "/add-food/{usuario}"
 
 @using FitCalc.Services;
+@using FitCalc.Models;
 @inject NavigationManager Navigation
 @inject DatabaseService DbService
-@using FitCalc.Models
 
 <style>
     .container {
@@ -144,7 +144,7 @@
             {
                 @foreach (var alimento in AlimentosFiltrados)
                 {
-                    <div class="alimento-item">
+                    <div class="alimento-item" @onclick="() => SeleccionarAlimento(alimento)">
                         <b>@alimento.Nombre</b><br />
                         Calorías: @alimento.Kcal kcal<br />
                         Proteínas: @alimento.Proteinas g<br />
@@ -163,7 +163,32 @@
     </div>
 
     <div class="main-content">
-        <h2>Selecciona un alimento desde la izquierda</h2>
+        @if (alimentoSeleccionado != null)
+        {
+            <h2>Detalle del alimento seleccionado</h2>
+            <p><b>Nombre:</b> @alimentoSeleccionado.Nombre</p>
+            <p><b>Calorías:</b> @alimentoSeleccionado.Kcal kcal</p>
+            <p><b>Proteínas:</b> @alimentoSeleccionado.Proteinas g</p>
+            <p><b>Grasas:</b> @alimentoSeleccionado.Grasas g</p>
+            <p><b>Hidratos:</b> @alimentoSeleccionado.Hidratos g</p>
+
+            <div>
+                <label>¿Cuántos gramos/ml vas a consumir?</label><br />
+                <input type="number" @bind="cantidadConsumida" min="1" style="width: 100px; padding: 5px;" />
+                <button @onclick="ConsumirAlimento" style="margin-left: 10px;">Aceptar</button>
+
+                @if (!string.IsNullOrWhiteSpace(mensajeError))
+                {
+                    <div style="color:red; font-weight:bold; margin-bottom:15px;">
+                        @mensajeError
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <h2>Selecciona un alimento desde la izquierda</h2>
+        }
     </div>
 </div>
 
@@ -178,6 +203,8 @@
             <input placeholder="Grasas (g)" type="number" step="0.01" @bind="nuevoAlimento.Grasas" />
             <input placeholder="Hidratos (g)" type="number" step="0.01" @bind="nuevoAlimento.Hidratos" />
             <button @onclick="GuardarAlimentoAsync">Guardar</button>
+
+
         </div>
     </div>
 }
@@ -190,8 +217,13 @@
     private List<Alimento> alimentos = new();
     private string filtroBusqueda = "";
     private bool mostrarModal = false;
-
     private Alimento nuevoAlimento = new();
+    private Alimento? alimentoSeleccionado;
+    private double cantidadConsumida;
+
+
+    private string? mensajeError = null;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -206,7 +238,7 @@
     private void CerrarModal()
     {
         mostrarModal = false;
-        nuevoAlimento = new(); // limpiar campos
+        nuevoAlimento = new();
     }
 
     private async Task GuardarAlimentoAsync()
@@ -215,8 +247,52 @@
         {
             await DbService.InsertarAlimentoAsync(nuevoAlimento);
             alimentos = await DbService.ObtenerAlimentosAsync();
-            filtroBusqueda = ""; // resetear filtro si quieres
+            filtroBusqueda = "";
             CerrarModal();
         }
     }
+
+    private void SeleccionarAlimento(Alimento alimento)
+    {
+        alimentoSeleccionado = alimento;
+        cantidadConsumida = 0;
+    }
+
+    private async Task ConsumirAlimento()
+    {
+        mensajeError = null;
+
+        if (alimentoSeleccionado == null || cantidadConsumida <= 0 || string.IsNullOrWhiteSpace(usuario))
+        {
+            mensajeError = "Debe seleccionar un alimento, ingresar una cantidad válida y tener un usuario.";
+            return;
+        }
+
+        try
+        {
+            double factor = cantidadConsumida / 100.0;
+
+            var alimentoConsumido = new Alimento
+                {
+                    Id = alimentoSeleccionado.Id, // ✅ ID del producto
+                    Nombre = alimentoSeleccionado.Nombre,
+                    Proteinas = (float)Math.Round(alimentoSeleccionado.Proteinas * factor, 2),
+                    Grasas = (float)Math.Round(alimentoSeleccionado.Grasas * factor, 2),
+                    Hidratos = (float)Math.Round(alimentoSeleccionado.Hidratos * factor, 2),
+                    Kcal = (int)Math.Round(alimentoSeleccionado.Kcal * factor)
+                };
+
+            await DbService.SumarMacronutrientesAUsuario(usuario, alimentoConsumido);
+
+            alimentoSeleccionado = null;
+            cantidadConsumida = 0;
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al consumir alimento: {ex.Message}";
+        }
+    }
+
+
+
 }

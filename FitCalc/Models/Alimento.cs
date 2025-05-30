@@ -10,7 +10,7 @@ namespace FitCalc.Models
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;
-        public int Kcal { get; set; }
+        public float Kcal { get; set; }
         public float Grasas { get; set; }
         public float Hidratos { get; set; }
         public float Proteinas { get; set; }
