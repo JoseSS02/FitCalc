@@ -1,0 +1,207 @@
+﻿@page "/home"
+@inject NavigationManager Navigation
+@inject DatabaseService DbService
+@using FitCalc.Models
+@using FitCalc.Services
+
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #eef2ff;
+    }
+
+    .home-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .welcome {
+        font-size: 1.2rem;
+        color: #1e3a8a;
+    }
+
+    .macros-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .macro-bar {
+        background-color: #e5e7eb;
+        border-radius: 8px;
+        height: 24px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .macro-fill {
+        height: 100%;
+        text-align: right;
+        padding-right: 8px;
+        color: white;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        border-radius: 8px;
+    }
+
+    .carbs {
+        background-color: #f59e0b;
+    }
+
+    .proteins {
+        background-color: #10b981;
+    }
+
+    .fats {
+        background-color: #3b82f6;
+    }
+
+    .macro-label {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .macro-info {
+        text-align: right;
+        font-size: 0.9rem;
+        color: #374151;
+    }
+
+    .actions {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .action-button {
+        padding: 10px 16px;
+        background-color: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+        .action-button:hover {
+            background-color: #4338ca;
+        }
+</style>
+
+<div class="home-container">
+    <div class="header">
+        <h2>Resumen Diario de Calorías</h2>
+        <p class="welcome">Bienvenido, <b>@NombreUsuario</b></p>
+        <p>Calorías totales: <b>@totalCalories</b></p>
+        <p>Calorías necesarias: <b>@caloriasNecesarias</b></p>
+
+    </div>
+
+    <div class="macros-section">
+        <div>
+            <div class="macro-label">Carbohidratos</div>
+            <div class="macro-bar">
+                <div class="macro-fill carbs" style="width:@GetMacroPercentage(carbs, maxCarbs)%;">@carbs / @maxCarbs g</div>
+
+            </div>
+        </div>
+
+        <div>
+            <div class="macro-label">Proteínas</div>
+            <div class="macro-bar">
+                <div class="macro-fill proteins" style="width:@GetMacroPercentage(proteins, maxProteins)%;">@proteins /@maxProteins g</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="macro-label">Grasas</div>
+            <div class="macro-bar">
+                <div class="macro-fill fats" style="width:@GetMacroPercentage(fats, maxFats)%;">@fats /@maxFats g</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="action-button" @onclick="GoToAddFood">Añadir Alimento</button>
+        <button class="action-button" @onclick="GoToTips">Tips Nutricionales</button>
+    </div>
+</div>
+
+@code {
+    private string NombreUsuario = string.Empty;
+
+    private Usuario? usuarioDatos;
+
+    private float carbs = 0;
+    private float proteins = 0;
+    private float fats = 0;
+    private int totalCalories => (int)((carbs * 4) + (proteins * 4) + (fats * 9));
+
+    private float maxCarbs = 1;
+    private float maxProteins = 1;
+    private float maxFats = 1;
+    private int caloriasNecesarias = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('='))
+            .Where(p => p.Length == 2)
+            .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
+
+        if (!queryParams.TryGetValue("usuario", out var usuario))
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        NombreUsuario = usuario;
+
+        usuarioDatos = await DbService.ObtenerUsuarioPorNombreAsync(NombreUsuario);
+        if (usuarioDatos is null)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Asignar valores de usuario con seguridad ante nulls
+        maxCarbs = usuarioDatos.HidratosNecesarios ?? 1;
+        maxProteins = usuarioDatos.ProteinasNecesarias ?? 1;
+        maxFats = usuarioDatos.GrasasNecesarias ?? 1;
+        caloriasNecesarias = usuarioDatos.CaloriasNecesarias ?? 0;
+
+        var macroDatos = await DbService.ObtenerMacronutrientesAsync(usuario);
+        if (macroDatos is not null)
+        {
+            carbs = macroDatos.Hidratos;
+            proteins = macroDatos.Proteinas;
+            fats = macroDatos.Grasas;
+        }
+    }
+
+    private string GetMacroPercentage(float value, float max)
+    {
+        if (max <= 0) return "0";
+        var percentage = (int)((value / max) * 100);
+        return percentage > 100 ? "100" : percentage.ToString();
+    }
+
+    void GoToAddFood() => Navigation.NavigateTo($"/add-food?usuario={NombreUsuario}");
+    void GoToTips() => Navigation.NavigateTo("/tips");
+}

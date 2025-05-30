@@ -1,0 +1,265 @@
+﻿@page "/"
+@page "/login"
+@inject FitCalc.Services.DatabaseService DbService
+@inject NavigationManager Navigation
+@using FitCalc.Models
+
+<style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #e0e7ff;
+    }
+
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        padding: 20px;
+    }
+
+    .login-box {
+        background: white;
+        padding: 40px 30px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+        .login-box h2 {
+            color: #1e40af;
+            margin-bottom: 20px;
+        }
+
+    .login-input {
+        width: 100%;
+        padding: 12px 15px;
+        margin-bottom: 5px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 1rem;
+        box-sizing: border-box;
+    }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 6px rgba(99, 102, 241, 0.5);
+        }
+
+    .login-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4f46e5;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+        .login-button:hover {
+            background-color: #4338ca;
+        }
+
+    .toggle-register {
+        margin-top: 15px;
+        font-size: 0.9rem;
+        color: #1e40af;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+
+    .login-error {
+        color: #dc2626;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+
+    .login-success {
+        color: #16a34a;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+
+    .field-error {
+        color: #dc2626;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+        text-align: left;
+    }
+
+    .register-section {
+        margin-top: 25px;
+        transition: max-height 0.3s ease;
+        overflow: hidden;
+    }
+</style>
+
+<div class="login-container">
+    <div class="login-box">
+        <h2>Iniciar Sesión</h2>
+        <input @bind="loginUsername" class="login-input" placeholder="Usuario" />
+        <input @bind="loginPassword" class="login-input" placeholder="Contraseña" type="password" />
+        <button @onclick="OnLoginClicked" class="login-button">Entrar</button>
+
+        <div class="toggle-register" @onclick="ToggleRegistro">
+            ¿No tienes cuenta?
+        </div>
+
+        <div class="register-section" style="@GetRegisterStyle()">
+            <input @bind="nuevoUsuario.Nombre" class="login-input" placeholder="Usuario" />
+            @if (!string.IsNullOrEmpty(errorNombre))
+            {
+                <div class="field-error">@errorNombre</div>
+            }
+
+            <input @bind="nuevoUsuario.Clave" class="login-input" placeholder="Contraseña" type="password" />
+            @if (!string.IsNullOrEmpty(errorClave))
+            {
+                <div class="field-error">@errorClave</div>
+            }
+
+            <input @bind="nuevoUsuario.Correo" class="login-input" placeholder="Correo electrónico" />
+            @if (!string.IsNullOrEmpty(errorCorreo))
+            {
+                <div class="field-error">@errorCorreo</div>
+            }
+
+            <button @onclick="RegistrarUsuario" class="login-button">Registrar</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(mensajeError))
+        {
+            <p class="login-error">@mensajeError</p>
+        }
+        @if (!string.IsNullOrEmpty(mensajeExito))
+        {
+            <p class="login-success">@mensajeExito</p>
+        }
+
+        @if (!string.IsNullOrEmpty(loginError))
+        {
+            <p class="login-error">@loginError</p>
+        }
+    </div>
+</div>
+
+@code {
+    private string loginUsername = string.Empty;
+    private string loginPassword = string.Empty;
+    private string loginError = string.Empty;
+
+    private Usuario nuevoUsuario = new();
+    private string mensajeError = string.Empty;
+    private string mensajeExito = string.Empty;
+
+    private bool mostrarRegistro = false;
+
+    private string errorNombre = string.Empty;
+    private string errorClave = string.Empty;
+    private string errorCorreo = string.Empty;
+
+    private void ToggleRegistro()
+    {
+        mostrarRegistro = !mostrarRegistro;
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
+        loginError = string.Empty;
+        ClearValidationErrors();
+    }
+
+    private string GetRegisterStyle() =>
+        mostrarRegistro ? "max-height: 600px;" : "max-height: 0px;";
+
+    private async Task OnLoginClicked()
+    {
+        loginError = string.Empty;
+
+        bool usuarioExiste = await DbService.ExisteUsuarioAsync(loginUsername);
+        if (!usuarioExiste)
+        {
+            loginError = "Usuario no existe.";
+            return;
+        }
+
+        bool claveValida = await DbService.ValidarUsuarioAsync(loginUsername, loginPassword);
+        if (!claveValida)
+        {
+            loginError = "Contraseña incorrecta.";
+            return;
+        }
+
+        // Todo correcto, redirigir
+        Navigation.NavigateTo($"/home?usuario={Uri.EscapeDataString(loginUsername)}");
+
+    }
+
+    private async Task RegistrarUsuario()
+    {
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
+        ClearValidationErrors();
+
+        bool isValid = await ValidarFormularioAsync();
+
+        if (!isValid)
+            return;
+
+        try
+        {
+            await DbService.InsertarUsuarioAsync(nuevoUsuario);
+            mensajeExito = "Usuario registrado correctamente.";
+            nuevoUsuario = new Usuario();
+            mostrarRegistro = false;
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al registrar: {ex.Message}";
+        }
+    }
+
+    private async Task<bool> ValidarFormularioAsync()
+    {
+        bool valido = true;
+
+        if (string.IsNullOrWhiteSpace(nuevoUsuario.Nombre))
+        {
+            errorNombre = "El nombre de usuario es obligatorio.";
+            valido = false;
+        }
+        else if (await DbService.ExisteUsuarioAsync(nuevoUsuario.Nombre))
+        {
+            errorNombre = "Ese nombre de usuario ya está en uso. Elige otro.";
+            valido = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(nuevoUsuario.Clave) || nuevoUsuario.Clave.Length < 6 || !nuevoUsuario.Clave.Any(char.IsUpper))
+        {
+            errorClave = "La contraseña debe tener al menos 6 caracteres y una mayúscula.";
+            valido = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(nuevoUsuario.Correo) || !nuevoUsuario.Correo.Contains("@"))
+        {
+            errorCorreo = "Correo no válido. Debe contener '@'.";
+            valido = false;
+        }
+
+        return valido;
+    }
+
+    private void ClearValidationErrors()
+    {
+        errorNombre = string.Empty;
+        errorClave = string.Empty;
+        errorCorreo = string.Empty;
+    }
+}

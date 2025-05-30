@@ -1,0 +1,39 @@
+﻿@page "/settings"
+
+<h2>Ajustes del Perfil</h2>
+
+<select @bind="goal">
+    <option value="Pérdida de peso">Pérdida de peso</option>
+    <option value="Mantenimiento">Mantenimiento</option>
+    <option value="Ganancia muscular">Ganancia muscular</option>
+</select>
+<br />
+<input @bind="weight" type="number" placeholder="Peso (kg)" />
+<br />
+<input @bind="height" type="number" placeholder="Estatura (cm)" />
+<br />
+<input @bind="age" type="number" placeholder="Edad" />
+<br />
+<select @bind="activity">
+    <option>Sedentario</option>
+    <option>Moderado</option>
+    <option>Activo</option>
+</select>
+<br />
+<input @bind="calorieGoal" type="number" placeholder="Meta calórica diaria" />
+<br />
+
+<button @onclick="SaveSettings">Guardar</button>
+
+@code {
+    private string goal = "Mantenimiento";
+    private double weight = 70, height = 170;
+    private int age = 30;
+    private string activity = "Moderado";
+    private int calorieGoal = 2000;
+
+    private void SaveSettings()
+    {
+        Console.WriteLine($"Meta: {goal} - {calorieGoal} kcal");
+    }
+}

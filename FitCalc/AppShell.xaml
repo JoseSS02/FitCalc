@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Shell
+    x:Class="FitCalc.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:FitCalc.Pages"
+    Shell.FlyoutBehavior="Disabled">
+
+    <ShellContent Title="Login" ContentTemplate="{DataTemplate pages:Login}" Route="login" />
+    <ShellContent Title="Home" ContentTemplate="{DataTemplate pages:Home}" Route="home" />
+    <ShellContent Title="AddFood" ContentTemplate="{DataTemplate pages:AddFood}" Route="add-food" />
+    <ShellContent Title="Settings" ContentTemplate="{DataTemplate pages:Settings}" Route="settings" />
+    <ShellContent Title="Tips" ContentTemplate="{DataTemplate pages:Tips}" Route="tips" />
+
+</Shell>
