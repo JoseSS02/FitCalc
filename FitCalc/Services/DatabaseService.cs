@@ -109,62 +109,69 @@ public class DatabaseService
             using var connection = new MySqlConnection(connectionString);
             await connection.OpenAsync();
 
-            // Obtener datos actuales del usuario desde la tabla macronutrientes
+            var fechaActual = DateTime.Today;
+
+            // Comprobar si ya existe un registro para ese usuario y día
             var selectCmd = connection.CreateCommand();
-            selectCmd.CommandText = @"SELECT Calorias, Grasas, Hidratos, Proteinas FROM macronutrientes WHERE Usuario = @usuario";
+            selectCmd.CommandText = @"
+            SELECT Calorias, Grasas, Hidratos, Proteinas 
+            FROM macronutrientes 
+            WHERE Usuario = @usuario AND Dia = @dia";
             selectCmd.Parameters.AddWithValue("@usuario", usuario);
+            selectCmd.Parameters.AddWithValue("@dia", fechaActual);
 
             using var reader = await selectCmd.ExecuteReaderAsync();
-            if (!await reader.ReadAsync())
+
+            if (await reader.ReadAsync())
             {
-                Console.WriteLine($"⚠️ Usuario '{usuario}' no encontrado en la tabla macronutrientes.");
-                return;
-            }
+                // Si existe, sumar a los valores actuales
+                float caloriasActuales = reader.GetFloat(0);
+                float grasas = reader.GetFloat(1);
+                float hidratos = reader.GetFloat(2);
+                float proteinas = reader.GetFloat(3);
 
-            // Parsear datos existentes
-            float caloriasActuales = reader.GetFloat(0);
-            float grasas = reader.GetFloat(1);
-            float hidratos = reader.GetFloat(2);
-            float proteinas = reader.GetFloat(3);
+                float nuevasCalorias = caloriasActuales + consumo.Kcal;
+                float nuevasGrasas = grasas + consumo.Grasas;
+                float nuevosHidratos = hidratos + consumo.Hidratos;
+                float nuevasProteinas = proteinas + consumo.Proteinas;
 
-            Console.WriteLine($"🔍 Datos actuales del usuario '{usuario}' en tabla macronutrientes:");
-            Console.WriteLine($"Calorías: {caloriasActuales}, Grasas: {grasas}, Hidratos: {hidratos}, Proteínas: {proteinas}");
+                await reader.CloseAsync();
 
-            // Sumar los consumos
-            float nuevasCalorias = caloriasActuales + consumo.Kcal;
-            float nuevasGrasas = grasas + consumo.Grasas;
-            float nuevosHidratos = hidratos + consumo.Hidratos;
-            float nuevasProteinas = proteinas + consumo.Proteinas;
+                var updateCmd = connection.CreateCommand();
+                updateCmd.CommandText = @"
+                UPDATE macronutrientes 
+                SET Calorias = @calorias, Grasas = @grasas, Hidratos = @hidratos, Proteinas = @proteinas
+                WHERE Usuario = @usuario AND Dia = @dia";
+                updateCmd.Parameters.AddWithValue("@calorias", nuevasCalorias);
+                updateCmd.Parameters.AddWithValue("@grasas", nuevasGrasas);
+                updateCmd.Parameters.AddWithValue("@hidratos", nuevosHidratos);
+                updateCmd.Parameters.AddWithValue("@proteinas", nuevasProteinas);
+                updateCmd.Parameters.AddWithValue("@usuario", usuario);
+                updateCmd.Parameters.AddWithValue("@dia", fechaActual);
 
-            Console.WriteLine("➕ Suma del consumo:");
-            Console.WriteLine($"Kcal: {consumo.Kcal}, Grasas: {consumo.Grasas}, Hidratos: {consumo.Hidratos}, Proteínas: {consumo.Proteinas}");
+                await updateCmd.ExecuteNonQueryAsync();
 
-            Console.WriteLine("📈 Nuevos valores:");
-            Console.WriteLine($"Calorías: {nuevasCalorias}, Grasas: {nuevasGrasas}, Hidratos: {nuevosHidratos}, Proteínas: {nuevasProteinas}");
-
-            // Cerrar el reader antes de ejecutar un nuevo comando
-            await reader.CloseAsync();
-
-            // Actualizar los datos en la tabla macronutrientes
-            var updateCmd = connection.CreateCommand();
-            updateCmd.CommandText = @"
-            UPDATE macronutrientes 
-            SET Calorias = @calorias, Grasas = @grasas, Hidratos = @hidratos, Proteinas = @proteinas
-            WHERE Usuario = @usuario";
-            updateCmd.Parameters.AddWithValue("@calorias", nuevasCalorias);
-            updateCmd.Parameters.AddWithValue("@grasas", nuevasGrasas);
-            updateCmd.Parameters.AddWithValue("@hidratos", nuevosHidratos);
-            updateCmd.Parameters.AddWithValue("@proteinas", nuevasProteinas);
-            updateCmd.Parameters.AddWithValue("@usuario", usuario);
-
-            int filasAfectadas = await updateCmd.ExecuteNonQueryAsync();
-            if (filasAfectadas == 0)
-            {
-                Console.WriteLine("⚠️ No se actualizó ninguna fila. Verifica si el usuario existe en la tabla macronutrientes.");
+                Console.WriteLine("✅ Macronutrientes actualizados correctamente.");
             }
             else
             {
-                Console.WriteLine($"✅ Macronutrientes actualizados correctamente para '{usuario}' en tabla macronutrientes. Filas afectadas: {filasAfectadas}");
+                await reader.CloseAsync();
+
+                // Si no existe, insertar un nuevo registro
+                var insertCmd = connection.CreateCommand();
+                insertCmd.CommandText = @"
+                INSERT INTO macronutrientes (Usuario, Dia, Calorias, Grasas, Hidratos, Proteinas)
+                VALUES (@usuario, @dia, @calorias, @grasas, @hidratos, @proteinas)";
+                insertCmd.Parameters.AddWithValue("@usuario", usuario);
+                insertCmd.Parameters.AddWithValue("@dia", fechaActual);
+                insertCmd.Parameters.AddWithValue("@calorias", consumo.Kcal);
+                insertCmd.Parameters.AddWithValue("@grasas", consumo.Grasas);
+                insertCmd.Parameters.AddWithValue("@hidratos", consumo.Hidratos);
+                insertCmd.Parameters.AddWithValue("@proteinas", consumo.Proteinas);
+
+                await insertCmd.ExecuteNonQueryAsync();
+
+                Console.WriteLine("🆕 Nuevo registro de macronutrientes creado para hoy.");
             }
         }
         catch (Exception ex)
@@ -172,9 +179,6 @@ public class DatabaseService
             Console.WriteLine($"❌ Error al sumar macronutrientes: {ex.Message}");
         }
     }
-
-
-
 
 
     public async Task<Usuario?> ObtenerUsuarioAsync(string nombre)
@@ -238,35 +242,82 @@ public class DatabaseService
     }
 
 
-
-
-
-    //LEER MACROS
-
     public async Task<Macronutrientes?> ObtenerMacronutrientesAsync(string usuario)
     {
+        var hoy = DateTime.Today;
+
         using var connection = new MySqlConnection(connectionString);
         await connection.OpenAsync();
 
-        var command = new MySqlCommand("SELECT * FROM macronutrientes WHERE usuario = @usuario", connection);
-        command.Parameters.AddWithValue("@usuario", usuario);
+        var selectCmd = connection.CreateCommand();
+        selectCmd.CommandText = @"
+        SELECT Calorias, Grasas, Hidratos, Proteinas 
+        FROM macronutrientes 
+        WHERE Usuario = @usuario AND Dia = @dia";
+        selectCmd.Parameters.AddWithValue("@usuario", usuario);
+        selectCmd.Parameters.AddWithValue("@dia", hoy);
 
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await selectCmd.ExecuteReaderAsync();
 
         if (await reader.ReadAsync())
         {
             return new Macronutrientes
             {
-                Usuario = reader.GetString("usuario"),
-                Calorias = reader.GetFloat("calorias"),
-                Grasas = reader.GetFloat("grasas"),
-                Hidratos = reader.GetFloat("hidratos"),
-                Proteinas = reader.GetFloat("proteinas")
+                Usuario = usuario,
+                Calorias = reader.GetFloat(0),
+                Grasas = reader.GetFloat(1),
+                Hidratos = reader.GetFloat(2),
+                Proteinas = reader.GetFloat(3),
+                Dia = hoy
             };
         }
 
-        return null;
+        await reader.CloseAsync();
+
+        // Si no existe el registro, lo insertamos con valores en cero
+        var insertCmd = connection.CreateCommand();
+        insertCmd.CommandText = @"
+        INSERT INTO macronutrientes (Usuario, Calorias, Grasas, Hidratos, Proteinas, Dia)
+        VALUES (@usuario, 0, 0, 0, 0, @dia)";
+        insertCmd.Parameters.AddWithValue("@usuario", usuario);
+        insertCmd.Parameters.AddWithValue("@dia", hoy);
+        await insertCmd.ExecuteNonQueryAsync();
+
+        return new Macronutrientes
+        {
+            Usuario = usuario,
+            Calorias = 0,
+            Grasas = 0,
+            Hidratos = 0,
+            Proteinas = 0,
+            Dia = hoy
+        };
     }
+
+
+    public async Task ActualizarMacrosUsuarioAsync(string nombreUsuario, int calorias, float proteinas, float grasas, float hidratos)
+    {
+        using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var query = @"
+        UPDATE usuarios 
+        SET caloriasnecesarias = @calorias,
+            proteinasnecesarias = @proteinas,
+            grasasnecesarias = @grasas,
+            hidratosnecesarios = @hidratos
+        WHERE nombre = @nombreUsuario";
+
+        using var command = new MySqlCommand(query, connection);
+        command.Parameters.AddWithValue("@calorias", calorias);
+        command.Parameters.AddWithValue("@proteinas", proteinas);
+        command.Parameters.AddWithValue("@grasas", grasas);
+        command.Parameters.AddWithValue("@hidratos", hidratos);
+        command.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
 
 
 }

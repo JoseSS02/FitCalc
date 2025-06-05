@@ -38,7 +38,7 @@
         border-radius: 6px;
         border: 1px solid #ccc;
         margin-bottom: 15px;
-        margin-top: 40px; /* para dejar espacio al nombre */
+        margin-top: 40px;
     }
 
     .alimentos-scroll {
@@ -131,6 +131,10 @@
             }
 </style>
 
+<button @onclick="VolverAHome" style="margin: 20px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #4f46e5;">
+    ⬅️ Volver
+</button>
+
 <div class="container">
     <div class="sidebar">
         <div class="user-name">@usuario</div>
@@ -203,8 +207,6 @@
             <input placeholder="Grasas (g)" type="number" step="0.01" @bind="nuevoAlimento.Grasas" />
             <input placeholder="Hidratos (g)" type="number" step="0.01" @bind="nuevoAlimento.Hidratos" />
             <button @onclick="GuardarAlimentoAsync">Guardar</button>
-
-
         </div>
     </div>
 }
@@ -221,9 +223,7 @@
     private Alimento? alimentoSeleccionado;
     private double cantidadConsumida;
 
-
     private string? mensajeError = null;
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -274,7 +274,7 @@
 
             var alimentoConsumido = new Alimento
                 {
-                    Id = alimentoSeleccionado.Id, // ✅ ID del producto
+                    Id = alimentoSeleccionado.Id,
                     Nombre = alimentoSeleccionado.Nombre,
                     Proteinas = (float)Math.Round(alimentoSeleccionado.Proteinas * factor, 2),
                     Grasas = (float)Math.Round(alimentoSeleccionado.Grasas * factor, 2),
@@ -293,6 +293,11 @@
         }
     }
 
-
-
+    private void VolverAHome()
+    {
+        if (!string.IsNullOrWhiteSpace(usuario))
+        {
+            Navigation.NavigateTo($"/home?usuario={usuario}");
+        }
+    }
 }

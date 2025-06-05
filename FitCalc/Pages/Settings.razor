@@ -1,39 +1,142 @@
 ﻿@page "/settings"
+@inject NavigationManager Navigation
+@inject DatabaseService DbService
+@using FitCalc.Models
+@using FitCalc.Services
+@using System.Web
 
-<h2>Ajustes del Perfil</h2>
+<style>
+    .settings-container {
+        max-width: 400px;
+        margin: 80px auto 20px;
+        padding: 20px;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-<select @bind="goal">
-    <option value="Pérdida de peso">Pérdida de peso</option>
-    <option value="Mantenimiento">Mantenimiento</option>
-    <option value="Ganancia muscular">Ganancia muscular</option>
-</select>
-<br />
-<input @bind="weight" type="number" placeholder="Peso (kg)" />
-<br />
-<input @bind="height" type="number" placeholder="Estatura (cm)" />
-<br />
-<input @bind="age" type="number" placeholder="Edad" />
-<br />
-<select @bind="activity">
-    <option>Sedentario</option>
-    <option>Moderado</option>
-    <option>Activo</option>
-</select>
-<br />
-<input @bind="calorieGoal" type="number" placeholder="Meta calórica diaria" />
-<br />
+    h2 {
+        text-align: center;
+        color: #1e3a8a;
+        margin-bottom: 24px;
+    }
 
-<button @onclick="SaveSettings">Guardar</button>
+    label {
+        display: block;
+        margin-top: 16px;
+        margin-bottom: 6px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    select, input {
+        width: 100%;
+        padding: 10px;
+        font-size: 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+
+    button {
+        margin-top: 24px;
+        width: 100%;
+        padding: 12px;
+        background-color: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+        button:hover {
+            background-color: #4338ca;
+        }
+</style>
+
+<div class="settings-container">
+    <h2>Ajustes del Perfil</h2>
+
+    <label>Peso (kg)</label>
+    <input @bind="weight" type="number" min="30" max="250" />
+
+    <label>Estatura (cm)</label>
+    <input @bind="height" type="number" min="100" max="250" />
+
+    <label>Edad</label>
+    <input @bind="age" type="number" min="10" max="100" />
+
+    <label>Ejercicio</label>
+    <select @bind="activity">
+        <option>Ninguno</option>
+        <option>Moderado</option>
+        <option>Activo</option>
+    </select>
+
+    <label>Objetivo</label>
+    <select @bind="goal">
+        <option>Ganancia muscular</option>
+        <option>Mantenimiento</option>
+        <option>Pérdida de peso</option>
+    </select>
+
+    <button @onclick="SaveSettings">Guardar</button>
+</div>
 
 @code {
+    private string NombreUsuario = string.Empty;
+
     private string goal = "Mantenimiento";
-    private double weight = 70, height = 170;
+    private double weight = 70;
+    private double height = 170;
     private int age = 30;
     private string activity = "Moderado";
-    private int calorieGoal = 2000;
 
-    private void SaveSettings()
+    protected override void OnInitialized()
     {
-        Console.WriteLine($"Meta: {goal} - {calorieGoal} kcal");
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        var usuario = queryParams.Get("usuario");
+
+        if (string.IsNullOrEmpty(usuario))
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        NombreUsuario = usuario;
     }
+
+    private async Task SaveSettings()
+    {
+        // Cálculo de TMB (fórmula de Mifflin-St Jeor)
+        double tmb = 10 * weight + 6.25 * height - 5 * age + 5;
+
+        double factorActividad = activity switch
+        {
+            "Moderado" => 1.55,
+            "Activo" => 1.9,
+            _ => 1.2
+        };
+
+        double calorias = tmb * factorActividad;
+
+        if (goal == "Pérdida de peso")
+            calorias -= 500;
+        else if (goal == "Ganancia muscular")
+            calorias += 500;
+
+        int caloriasFinal = (int)calorias;
+        float proteinas = (float)(weight * 2); // 2g/kg de peso
+        float grasas = (float)(weight * 1);    // 1g/kg
+        float hidratos = (float)((calorias - (proteinas * 4 + grasas * 9)) / 4);
+
+        await DbService.ActualizarMacrosUsuarioAsync(NombreUsuario, caloriasFinal, proteinas, grasas, hidratos);
+
+        Navigation.NavigateTo($"/home?usuario={NombreUsuario}");
+    }
+
 }

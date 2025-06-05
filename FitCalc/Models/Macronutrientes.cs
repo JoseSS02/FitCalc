@@ -13,5 +13,6 @@ namespace FitCalc.Models
         public float Grasas { get; set; }
         public float Hidratos { get; set; }
         public float Proteinas { get; set; }
+        public DateTime Dia { get; set; }
     }
 }

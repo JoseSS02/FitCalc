@@ -12,11 +12,44 @@
         background-color: #eef2ff;
     }
 
+    .topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background-color: #1e40af;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+        .topbar .username {
+            font-weight: bold;
+        }
+
+        .topbar .menu button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+
+            .topbar .menu button:hover {
+                color: #cbd5e1;
+            }
+
     .home-container {
         display: flex;
         flex-direction: column;
         height: 100vh;
-        padding: 20px;
+        padding: 80px 20px 20px; /* espacio para topbar */
         box-sizing: border-box;
     }
 
@@ -102,13 +135,20 @@
         }
 </style>
 
+<div class="topbar">
+    <div class="username">Hola, @NombreUsuario</div>
+    <div class="menu">
+        <button @onclick="IrASettings">Opciones</button>
+        <button @onclick="CerrarSesion">Cerrar sesión</button>
+    </div>
+</div>
+
 <div class="home-container">
     <div class="header">
         <h2>Resumen Diario de Calorías</h2>
         <p class="welcome">Bienvenido, <b>@NombreUsuario</b></p>
         <p>Calorías totales: <b>@totalCalories</b></p>
         <p>Calorías necesarias: <b>@caloriasNecesarias</b></p>
-
     </div>
 
     <div class="macros-section">
@@ -116,7 +156,6 @@
             <div class="macro-label">Carbohidratos</div>
             <div class="macro-bar">
                 <div class="macro-fill carbs" style="width:@GetMacroPercentage(carbs, maxCarbs)%;">@carbs / @maxCarbs g</div>
-
             </div>
         </div>
 
@@ -143,7 +182,6 @@
 
 @code {
     private string NombreUsuario = string.Empty;
-
     private Usuario? usuarioDatos;
 
     private float carbs = 0;
@@ -180,7 +218,6 @@
             return;
         }
 
-        // Asignar valores de usuario con seguridad ante nulls
         maxCarbs = usuarioDatos.HidratosNecesarios ?? 1;
         maxProteins = usuarioDatos.ProteinasNecesarias ?? 1;
         maxFats = usuarioDatos.GrasasNecesarias ?? 1;
@@ -204,4 +241,6 @@
 
     void GoToAddFood() => Navigation.NavigateTo($"/add-food?usuario={NombreUsuario}");
     void GoToTips() => Navigation.NavigateTo("/tips");
+    void IrASettings() => Navigation.NavigateTo($"/settings?usuario={NombreUsuario}");
+    void CerrarSesion() => Navigation.NavigateTo("/login");
 }
