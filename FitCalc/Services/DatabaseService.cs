@@ -318,6 +318,33 @@ public class DatabaseService
         await command.ExecuteNonQueryAsync();
     }
 
+    public async Task<List<Tip>> ObtenerTipsPorCategoriaAsync(string categoria)
+    {
+        var tips = new List<Tip>();
+
+        using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var query = "SELECT Id, Categoria, Consejo FROM Tips WHERE Categoria = @Categoria";
+
+        using var command = new MySqlCommand(query, connection);
+        command.Parameters.AddWithValue("@Categoria", categoria);
+
+        using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            tips.Add(new Tip
+            {
+                Id = reader.GetInt32("Id"),
+                Categoria = reader.GetString("Categoria"),
+                Consejo = reader.GetString("Consejo")
+            });
+        }
+
+        return tips;
+    }
+
+
 
 
 }

@@ -12,44 +12,43 @@
         background-color: #eef2ff;
     }
 
-    .topbar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 60px;
-        background-color: #1e40af;
-        color: white;
+    .layout {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0 20px;
-        z-index: 1000;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        min-height: 100vh;
     }
 
-        .topbar .username {
-            font-weight: bold;
+    .sidebar {
+        width: 220px;
+        background-color: #1e40af;
+        color: white;
+        padding: 20px;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+
+        .sidebar h3 {
+            margin-bottom: 30px;
         }
 
-        .topbar .menu button {
+        .sidebar button {
             background: none;
             border: none;
             color: white;
+            text-align: left;
+            width: 100%;
+            padding: 10px 0;
             font-size: 1rem;
             cursor: pointer;
-            margin-left: 15px;
         }
 
-            .topbar .menu button:hover {
+            .sidebar button:hover {
                 color: #cbd5e1;
             }
 
-    .home-container {
+    .main {
+        flex: 1;
+        padding: 40px 20px;
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        padding: 80px 20px 20px; /* espacio para topbar */
         box-sizing: border-box;
     }
 
@@ -115,68 +114,74 @@
     }
 
     .actions {
-        margin-top: 20px;
+        margin-top: 40px;
         display: flex;
-        justify-content: space-around;
+        justify-content: center;
     }
 
-    .action-button {
-        padding: 10px 16px;
-        background-color: #4f46e5;
-        color: white;
+    .fancy-button {
+        padding: 16px 32px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
         border: none;
-        border-radius: 8px;
-        font-weight: 600;
+        border-radius: 40px;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: bold;
         cursor: pointer;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+        transition: transform 0.2s, box-shadow 0.3s;
     }
 
-        .action-button:hover {
-            background-color: #4338ca;
+        .fancy-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 25px rgba(99, 102, 241, 0.5);
         }
 </style>
 
-<div class="topbar">
-    <div class="username">Hola, @NombreUsuario</div>
-    <div class="menu">
-        <button @onclick="IrASettings">Opciones</button>
-        <button @onclick="CerrarSesion">Cerrar sesión</button>
-    </div>
-</div>
-
-<div class="home-container">
-    <div class="header">
-        <h2>Resumen Diario de Calorías</h2>
-        <p class="welcome">Bienvenido, <b>@NombreUsuario</b></p>
-        <p>Calorías totales: <b>@totalCalories</b></p>
-        <p>Calorías necesarias: <b>@caloriasNecesarias</b></p>
+<div class="layout">
+    <div class="sidebar">
+        <h3>👤 @NombreUsuario</h3>
+        <button @onclick="IrASettings">⚙️ Ajustes</button>
+        <button @onclick="IrADietas">📋 Dietas</button>
+        <button @onclick="GoToTips">💡 Tips</button>
+        <button @onclick="IrAContacto">📨 Contacto</button>
+        <button @onclick="CerrarSesion">🔓 Cerrar sesión</button>
     </div>
 
-    <div class="macros-section">
-        <div>
-            <div class="macro-label">Carbohidratos</div>
-            <div class="macro-bar">
-                <div class="macro-fill carbs" style="width:@GetMacroPercentage(carbs, maxCarbs)%;">@carbs / @maxCarbs g</div>
+    <div class="main">
+        <div class="header">
+            <h2>Resumen Diario de Calorías</h2>
+            <p class="welcome">Bienvenido, <b>@NombreUsuario</b></p>
+            <p>Calorías totales: <b>@totalCalories</b></p>
+            <p>Calorías necesarias: <b>@caloriasNecesarias</b></p>
+        </div>
+
+        <div class="macros-section">
+            <div>
+                <div class="macro-label">Carbohidratos</div>
+                <div class="macro-bar">
+                    <div class="macro-fill carbs" style="width:@GetMacroPercentage(carbs, maxCarbs)%;">@carbs / @maxCarbs g</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="macro-label">Proteínas</div>
+                <div class="macro-bar">
+                    <div class="macro-fill proteins" style="width:@GetMacroPercentage(proteins, maxProteins)%;">@proteins /@maxProteins g</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="macro-label">Grasas</div>
+                <div class="macro-bar">
+                    <div class="macro-fill fats" style="width:@GetMacroPercentage(fats, maxFats)%;">@fats /@maxFats g</div>
+                </div>
             </div>
         </div>
 
-        <div>
-            <div class="macro-label">Proteínas</div>
-            <div class="macro-bar">
-                <div class="macro-fill proteins" style="width:@GetMacroPercentage(proteins, maxProteins)%;">@proteins /@maxProteins g</div>
-            </div>
+        <div class="actions">
+            <button class="fancy-button" @onclick="GoToAddFood">🍽️ Añadir Alimento</button>
         </div>
-
-        <div>
-            <div class="macro-label">Grasas</div>
-            <div class="macro-bar">
-                <div class="macro-fill fats" style="width:@GetMacroPercentage(fats, maxFats)%;">@fats /@maxFats g</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="actions">
-        <button class="action-button" @onclick="GoToAddFood">Añadir Alimento</button>
-        <button class="action-button" @onclick="GoToTips">Tips Nutricionales</button>
     </div>
 </div>
 
@@ -240,7 +245,9 @@
     }
 
     void GoToAddFood() => Navigation.NavigateTo($"/add-food?usuario={NombreUsuario}");
-    void GoToTips() => Navigation.NavigateTo("/tips");
+    void GoToTips() => Navigation.NavigateTo($"/tips?usuario={NombreUsuario}");
     void IrASettings() => Navigation.NavigateTo($"/settings?usuario={NombreUsuario}");
+    void IrAContacto() => Navigation.NavigateTo($"/contact?usuario={NombreUsuario}");
+    void IrADietas() => Navigation.NavigateTo($"/dietas?usuario={NombreUsuario}");
     void CerrarSesion() => Navigation.NavigateTo("/login");
 }

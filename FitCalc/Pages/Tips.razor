@@ -1,18 +1,141 @@
 ﻿@page "/tips"
+@page "/tips/{usuario}"
 
-<h2>Tips Nutricionales</h2>
+@using FitCalc.Services;
+@using FitCalc.Models;
+@inject NavigationManager Navigation
+@inject DatabaseService DbService
 
-<ul>
-    <li>🍳 Importancia del desayuno</li>
-    <li>⚖️ Qué son los macronutrientes</li>
-    <li>🔍 Cómo leer una etiqueta nutricional</li>
-    <li>🧠 Mitos sobre dietas</li>
-</ul>
 
-<h3>Recomendaciones según tu objetivo:</h3>
+<style>
+    .container {
+        max-width: 800px;
+        margin: auto;
+        padding: 20px;
+        font-family: 'Segoe UI', sans-serif;
+    }
 
-<ul>
-    <li>🥗 Dietas bajas en carbohidratos</li>
-    <li>💪 Dietas altas en proteína</li>
-    <li>📅 Ejemplos de planes semanales</li>
-</ul>
+    h2 {
+        color: #1e3a8a;
+        margin-top: 30px;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        color: #1e3a8a;
+        margin-top: 30px;
+        font-size: 1.2rem;
+    }
+
+    .icon {
+        margin-right: 10px;
+        font-size: 1.1rem;
+    }
+
+    ul {
+        list-style: disc;
+        padding-left: 25px;
+        margin-bottom: 20px;
+    }
+
+    li {
+        background-color: #f3f4f6;
+        margin-bottom: 10px;
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+
+    .volver-btn {
+        margin-bottom: 20px;
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #4f46e5;
+    }
+
+        .volver-btn:hover {
+            color: #4338ca;
+        }
+</style>
+
+<div class="container">
+    <button class="volver-btn" @onclick="VolverAHome">⬅️ Volver</button>
+
+    <h2>Tips Nutricionales</h2>
+
+    <div class="section-title" @onclick="TogglePerdida">
+        <span class="icon">@((mostrarPerdida ? "🔽" : "▶️"))</span> 🥗 Pérdida de peso
+    </div>
+    @if (mostrarPerdida)
+    {
+        <ul>
+            @foreach (var tip in tipsPerdida)
+            {
+                <li>@tip.Consejo</li>
+            }
+        </ul>
+    }
+
+    <div class="section-title" @onclick="ToggleMantenimiento">
+        <span class="icon">@((mostrarMantenimiento ? "🔽" : "▶️"))</span> ⚖️ Mantenimiento
+    </div>
+    @if (mostrarMantenimiento)
+    {
+        <ul>
+            @foreach (var tip in tipsMantenimiento)
+            {
+                <li>@tip.Consejo</li>
+            }
+        </ul>
+    }
+
+    <div class="section-title" @onclick="ToggleGanancia">
+        <span class="icon">@((mostrarGanancia ? "🔽" : "▶️"))</span> 💪 Ganancia muscular
+    </div>
+    @if (mostrarGanancia)
+    {
+        <ul>
+            @foreach (var tip in tipsGanancia)
+            {
+                <li>@tip.Consejo</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? usuario { get; set; }
+
+    private List<Tip> tipsPerdida = new();
+    private List<Tip> tipsMantenimiento = new();
+    private List<Tip> tipsGanancia = new();
+
+    private bool mostrarPerdida = true;
+    private bool mostrarMantenimiento = true;
+    private bool mostrarGanancia = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tipsPerdida = await DbService.ObtenerTipsPorCategoriaAsync("Perdida de peso");
+        tipsMantenimiento = await DbService.ObtenerTipsPorCategoriaAsync("Mantenimiento");
+        tipsGanancia = await DbService.ObtenerTipsPorCategoriaAsync("Ganancia muscular");
+    }
+
+    private void VolverAHome()
+    {
+        if (!string.IsNullOrWhiteSpace(usuario))
+        {
+            Navigation.NavigateTo($"/home?usuario={usuario}");
+        }
+    }
+
+    private void TogglePerdida() => mostrarPerdida = !mostrarPerdida;
+    private void ToggleMantenimiento() => mostrarMantenimiento = !mostrarMantenimiento;
+    private void ToggleGanancia() => mostrarGanancia = !mostrarGanancia;
+}
+

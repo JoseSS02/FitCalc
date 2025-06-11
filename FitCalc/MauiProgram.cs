@@ -1,4 +1,5 @@
-﻿using FitCalc.Services;
+﻿using Blazored.LocalStorage;
+using FitCalc.Services;
 using Microsoft.AspNetCore.Components.WebView.Maui;
 // using FitCalc.Data; // Se usará después
 // using FitCalc.Services; // Se usará después
@@ -22,6 +23,8 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddScoped<DatabaseService>();
+        builder.Services.AddBlazoredLocalStorage();
+
 
 
 #if DEBUG

@@ -55,6 +55,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
       <PackageReference Include="MySqlConnector" Version="2.4.0" />
 
 	</ItemGroup>

@@ -1,0 +1,89 @@
+﻿@page "/contact"
+@inject NavigationManager Navigation
+@using System.Web
+
+<style>
+    .back-button {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        background-color: transparent;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #1e3a8a;
+    }
+
+    .contact-container {
+        max-width: 400px;
+        margin: 80px auto 20px;
+        padding: 20px;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h2 {
+        text-align: center;
+        color: #1e3a8a;
+        margin-bottom: 24px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+        font-size: 1rem;
+        color: #374151;
+    }
+
+        .contact-item i {
+            margin-right: 10px;
+            color: #4f46e5;
+        }
+
+    a.email-link {
+        color: #1d4ed8;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        a.email-link:hover {
+            text-decoration: underline;
+        }
+</style>
+
+<button class="back-button" @onclick="GoBack">←</button>
+
+<div class="contact-container">
+    <h2>Contacto</h2>
+
+    <div class="contact-item">
+        <i class="fas fa-phone"></i> Atención al cliente: <span style="margin-left: 8px;">+34 900 123 456</span>
+    </div>
+
+    <div class="contact-item">
+        <i class="fas fa-envelope"></i>
+        <a href="https://mail.google.com/mail/?view=cm&to=josejoaquinsanchezsolis@iestorredelrey.es" target="_blank" class="email-link">
+            josejoaquinsanchezsolis@iestorredelrey.es
+        </a>
+
+    </div>
+</div>
+
+@code {
+    private string NombreUsuario = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        NombreUsuario = queryParams.Get("usuario") ?? string.Empty;
+    }
+
+    void GoBack()
+    {
+        Navigation.NavigateTo($"/home?usuario={NombreUsuario}");
+    }
+}

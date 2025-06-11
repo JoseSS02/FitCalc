@@ -1,6 +1,7 @@
 ﻿@page "/settings"
 @inject NavigationManager Navigation
 @inject DatabaseService DbService
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
 @using FitCalc.Models
 @using FitCalc.Services
 @using System.Web
@@ -14,7 +15,24 @@
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        position: relative;
     }
+
+    .back-button {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        background-color: transparent;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #4f46e5;
+        font-weight: 600;
+    }
+
+        .back-button:hover {
+            color: #4338ca;
+        }
 
     h2 {
         text-align: center;
@@ -39,7 +57,7 @@
         box-sizing: border-box;
     }
 
-    button {
+    button.save-btn {
         margin-top: 24px;
         width: 100%;
         padding: 12px;
@@ -52,10 +70,12 @@
         cursor: pointer;
     }
 
-        button:hover {
+        button.save-btn:hover {
             background-color: #4338ca;
         }
 </style>
+
+<button class="back-button" @onclick="VolverAHome" title="Volver">&larr; Atrás</button>
 
 <div class="settings-container">
     <h2>Ajustes del Perfil</h2>
@@ -83,7 +103,7 @@
         <option>Pérdida de peso</option>
     </select>
 
-    <button @onclick="SaveSettings">Guardar</button>
+    <button class="save-btn" @onclick="SaveSettings">Guardar</button>
 </div>
 
 @code {
@@ -95,10 +115,10 @@
     private int age = 30;
     private string activity = "Moderado";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         var uri = new Uri(Navigation.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var usuario = queryParams.Get("usuario");
 
         if (string.IsNullOrEmpty(usuario))
@@ -108,6 +128,20 @@
         }
 
         NombreUsuario = usuario;
+
+        // Intentar cargar ajustes guardados en local storage
+        if (await localStorage.ContainKeyAsync("userSettings"))
+        {
+            var settings = await localStorage.GetItemAsync<UserSettings>("userSettings");
+            if (settings != null)
+            {
+                weight = settings.Weight;
+                height = settings.Height;
+                age = settings.Age;
+                activity = settings.Activity;
+                goal = settings.Goal;
+            }
+        }
     }
 
     private async Task SaveSettings()
@@ -134,9 +168,35 @@
         float grasas = (float)(weight * 1);    // 1g/kg
         float hidratos = (float)((calorias - (proteinas * 4 + grasas * 9)) / 4);
 
+        // Guardar en base de datos
         await DbService.ActualizarMacrosUsuarioAsync(NombreUsuario, caloriasFinal, proteinas, grasas, hidratos);
 
+        // Guardar en local storage
+        var settings = new UserSettings
+            {
+                Weight = weight,
+                Height = height,
+                Age = age,
+                Activity = activity,
+                Goal = goal
+            };
+        await localStorage.SetItemAsync("userSettings", settings);
+
+        // Navegar a home
         Navigation.NavigateTo($"/home?usuario={NombreUsuario}");
     }
 
+    private void VolverAHome()
+    {
+        Navigation.NavigateTo($"/home?usuario={NombreUsuario}");
+    }
+
+    public class UserSettings
+    {
+        public double Weight { get; set; }
+        public double Height { get; set; }
+        public int Age { get; set; }
+        public string Activity { get; set; } = "Moderado";
+        public string Goal { get; set; } = "Mantenimiento";
+    }
 }

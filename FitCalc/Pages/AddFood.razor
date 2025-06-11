@@ -44,6 +44,7 @@
     .alimentos-scroll {
         overflow-y: auto;
         flex-grow: 1;
+        margin-bottom: 70px;
     }
 
     .alimento-item {
@@ -60,22 +61,19 @@
         }
 
     .add-button {
-        margin-top: 10px;
         padding: 10px;
         background-color: #4f46e5;
         color: white;
         border: none;
         border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        font-size: 24px;
-        text-align: center;
+        width: 50px;
+        height: 50px;
+        font-size: 28px;
         cursor: pointer;
-        align-self: center;
-        position: absolute;
+        position: fixed;
         bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 150px;
+        z-index: 100;
     }
 
         .add-button:hover {
@@ -104,12 +102,17 @@
         background-color: white;
         padding: 20px;
         border-radius: 10px;
-        width: 300px;
+        width: 320px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         display: flex;
         flex-direction: column;
         gap: 10px;
     }
+
+        .modal label {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
 
         .modal input {
             padding: 8px;
@@ -201,11 +204,23 @@
     <div class="modal-overlay" @onclick="CerrarModal">
         <div class="modal" @onclick:stopPropagation>
             <h3>Añadir Alimento</h3>
+            <p style="font-size: 0.9rem; color: #555;">* Valores por cada 100 g/ml</p>
+
+            <label>Nombre</label>
             <input placeholder="Nombre" @bind="nuevoAlimento.Nombre" />
-            <input placeholder="Kcal" type="number" @bind="nuevoAlimento.Kcal" />
-            <input placeholder="Proteínas (g)" type="number" step="0.01" @bind="nuevoAlimento.Proteinas" />
-            <input placeholder="Grasas (g)" type="number" step="0.01" @bind="nuevoAlimento.Grasas" />
-            <input placeholder="Hidratos (g)" type="number" step="0.01" @bind="nuevoAlimento.Hidratos" />
+
+            <label>Proteínas (g)</label>
+            <input type="number" step="0.01" @bind="nuevoAlimento.Proteinas" @oninput="CalcularKcal" />
+
+            <label>Grasas (g)</label>
+            <input type="number" step="0.01" @bind="nuevoAlimento.Grasas" @oninput="CalcularKcal" />
+
+            <label>Hidratos de carbono (g)</label>
+            <input type="number" step="0.01" @bind="nuevoAlimento.Hidratos" @oninput="CalcularKcal" />
+
+            <label>Calorías estimadas (Kcal)</label>
+            <input type="number" value="@nuevoAlimento.Kcal" disabled style="background-color: #f3f4f6;" />
+
             <button @onclick="GuardarAlimentoAsync">Guardar</button>
         </div>
     </div>
@@ -222,7 +237,6 @@
     private Alimento nuevoAlimento = new();
     private Alimento? alimentoSeleccionado;
     private double cantidadConsumida;
-
     private string? mensajeError = null;
 
     protected override async Task OnInitializedAsync()
@@ -299,5 +313,14 @@
         {
             Navigation.NavigateTo($"/home?usuario={usuario}");
         }
+    }
+
+    private void CalcularKcal(ChangeEventArgs _)
+    {
+        nuevoAlimento.Kcal = (int)Math.Round(
+            (nuevoAlimento.Proteinas * 4) +
+            (nuevoAlimento.Grasas * 9) +
+            (nuevoAlimento.Hidratos * 4)
+        );
     }
 }
