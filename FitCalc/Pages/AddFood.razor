@@ -297,6 +297,8 @@
                 };
 
             await DbService.SumarMacronutrientesAUsuario(usuario, alimentoConsumido);
+            await DbService.ActualizarAlimentosTexto(usuario, DateTime.Today, alimentoSeleccionado.Nombre, cantidadConsumida);
+
 
             alimentoSeleccionado = null;
             cantidadConsumida = 0;
@@ -323,4 +325,6 @@
             (nuevoAlimento.Hidratos * 4)
         );
     }
+
+
 }

@@ -344,6 +344,55 @@ public class DatabaseService
         return tips;
     }
 
+    public async Task ActualizarAlimentosTexto(string usuario, DateTime dia, string nombreAlimento, double cantidad)
+    {
+        using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Comprobamos si ya hay texto en el campo Alimentos para ese usuario y día
+        string selectQuery = "SELECT Alimentos FROM Macronutrientes WHERE Usuario = @usuario AND Dia = @dia";
+        using var selectCmd = new MySqlCommand(selectQuery, connection);
+        selectCmd.Parameters.AddWithValue("@usuario", usuario);
+        selectCmd.Parameters.AddWithValue("@dia", dia.ToString("yyyy-MM-dd"));
+
+        string? alimentosActuales = null;
+        var result = await selectCmd.ExecuteScalarAsync();
+        if (result != null && result != DBNull.Value)
+            alimentosActuales = Convert.ToString(result);
+
+        string nuevoTexto = $"{nombreAlimento} ({cantidad}g)";
+        if (!string.IsNullOrWhiteSpace(alimentosActuales))
+            nuevoTexto = alimentosActuales + ", " + nuevoTexto;
+
+        // Actualizamos el campo Alimentos
+        string updateQuery = "UPDATE Macronutrientes SET Alimentos = @alimentos WHERE Usuario = @usuario AND Dia = @dia";
+        using var updateCmd = new MySqlCommand(updateQuery, connection);
+        updateCmd.Parameters.AddWithValue("@alimentos", nuevoTexto);
+        updateCmd.Parameters.AddWithValue("@usuario", usuario);
+        updateCmd.Parameters.AddWithValue("@dia", dia.ToString("yyyy-MM-dd"));
+
+        await updateCmd.ExecuteNonQueryAsync();
+    }
+
+
+
+    public async Task EliminarMacronutrientesAntiguosAsync(string usuario)
+    {
+        using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        string deleteQuery = @"
+        DELETE FROM Macronutrientes 
+        WHERE Usuario = @usuario AND Dia < @fechaLimite";
+
+        using var deleteCmd = new MySqlCommand(deleteQuery, connection);
+        deleteCmd.Parameters.AddWithValue("@usuario", usuario);
+        deleteCmd.Parameters.AddWithValue("@fechaLimite", DateTime.UtcNow.AddDays(-7).ToString("yyyy-MM-dd"));
+
+        await deleteCmd.ExecuteNonQueryAsync();
+    }
+
+
 
 
 

@@ -81,27 +81,46 @@
     <h2>Ajustes del Perfil</h2>
 
     <label>Peso (kg)</label>
-    <input @bind="weight" type="number" min="30" max="250" />
+    <input @bind="weight" type="number" min="30" max="250" disabled="@modoPersonalizado" />
 
     <label>Estatura (cm)</label>
-    <input @bind="height" type="number" min="100" max="250" />
+    <input @bind="height" type="number" min="100" max="250" disabled="@modoPersonalizado" />
 
     <label>Edad</label>
-    <input @bind="age" type="number" min="10" max="100" />
+    <input @bind="age" type="number" min="10" max="100" disabled="@modoPersonalizado" />
 
     <label>Ejercicio</label>
-    <select @bind="activity">
+    <select @bind="activity" disabled="@modoPersonalizado">
         <option>Ninguno</option>
         <option>Moderado</option>
         <option>Activo</option>
     </select>
 
     <label>Objetivo</label>
-    <select @bind="goal">
+    <select @bind="goal" disabled="@modoPersonalizado">
         <option>Ganancia muscular</option>
         <option>Mantenimiento</option>
         <option>Pérdida de peso</option>
     </select>
+
+    <label style="display: flex; flex-direction: column; align-items: center; margin-top: 16px; cursor: pointer;">
+        <input type="checkbox" @bind="modoPersonalizado" style="width: 24px; height: 24px;" />
+        <span style="margin-top: 6px; font-weight: 600;">Personalizar</span>
+    </label>
+
+
+
+    @if (modoPersonalizado)
+    {
+        <label>Proteínas (g)</label>
+        <input type="number" @bind="proteinasPersonalizadas" min="0" step="1" />
+
+        <label>Grasas (g)</label>
+        <input type="number" @bind="grasasPersonalizadas" min="0" step="1" />
+
+        <label>Hidratos (g)</label>
+        <input type="number" @bind="hidratosPersonalizados" min="0" step="1" />
+    }
 
     <button class="save-btn" @onclick="SaveSettings">Guardar</button>
 </div>
@@ -115,10 +134,15 @@
     private int age = 30;
     private string activity = "Moderado";
 
+    private bool modoPersonalizado = false;
+    private float proteinasPersonalizadas;
+    private float grasasPersonalizadas;
+    private float hidratosPersonalizados;
+
     protected override async Task OnInitializedAsync()
     {
         var uri = new Uri(Navigation.Uri);
-        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
         var usuario = queryParams.Get("usuario");
 
         if (string.IsNullOrEmpty(usuario))
@@ -129,7 +153,6 @@
 
         NombreUsuario = usuario;
 
-        // Intentar cargar ajustes guardados en local storage
         if (await localStorage.ContainKeyAsync("userSettings"))
         {
             var settings = await localStorage.GetItemAsync<UserSettings>("userSettings");
@@ -146,32 +169,45 @@
 
     private async Task SaveSettings()
     {
-        // Cálculo de TMB (fórmula de Mifflin-St Jeor)
-        double tmb = 10 * weight + 6.25 * height - 5 * age + 5;
+        float proteinas;
+        float grasas;
+        float hidratos;
+        int caloriasFinal;
 
-        double factorActividad = activity switch
+        if (modoPersonalizado)
         {
-            "Moderado" => 1.55,
-            "Activo" => 1.9,
-            _ => 1.2
-        };
+            proteinas = proteinasPersonalizadas;
+            grasas = grasasPersonalizadas;
+            hidratos = hidratosPersonalizados;
 
-        double calorias = tmb * factorActividad;
+            caloriasFinal = (int)Math.Round(proteinas * 4 + grasas * 9 + hidratos * 4);
+        }
+        else
+        {
+            double tmb = 10 * weight + 6.25 * height - 5 * age + 5;
 
-        if (goal == "Pérdida de peso")
-            calorias -= 500;
-        else if (goal == "Ganancia muscular")
-            calorias += 500;
+            double factorActividad = activity switch
+            {
+                "Moderado" => 1.55,
+                "Activo" => 1.9,
+                _ => 1.2
+            };
 
-        int caloriasFinal = (int)calorias;
-        float proteinas = (float)(weight * 2); // 2g/kg de peso
-        float grasas = (float)(weight * 1);    // 1g/kg
-        float hidratos = (float)((calorias - (proteinas * 4 + grasas * 9)) / 4);
+            double calorias = tmb * factorActividad;
 
-        // Guardar en base de datos
+            if (goal == "Pérdida de peso")
+                calorias -= 500;
+            else if (goal == "Ganancia muscular")
+                calorias += 500;
+
+            caloriasFinal = (int)Math.Round(calorias);
+            proteinas = (float)(weight * 2);
+            grasas = (float)(weight * 1);
+            hidratos = (float)((calorias - (proteinas * 4 + grasas * 9)) / 4);
+        }
+
         await DbService.ActualizarMacrosUsuarioAsync(NombreUsuario, caloriasFinal, proteinas, grasas, hidratos);
 
-        // Guardar en local storage
         var settings = new UserSettings
             {
                 Weight = weight,
@@ -180,9 +216,8 @@
                 Activity = activity,
                 Goal = goal
             };
-        await localStorage.SetItemAsync("userSettings", settings);
 
-        // Navegar a home
+        await localStorage.SetItemAsync("userSettings", settings);
         Navigation.NavigateTo($"/home?usuario={NombreUsuario}");
     }
 

@@ -1,5 +1,436 @@
-﻿<h3>Dietas</h3>
+﻿@page "/dietas"
+@inject NavigationManager Navigation
+@inject DatabaseService DbService
+@using System.Web
+@using FitCalc.Models
+@using FitCalc.Services
+
+<style>
+  .topbar { position:fixed; top:0; left:0; width:100%; height:60px;
+    background:#1e40af; color:white; display:flex; align-items:center;
+    padding:0 20px; box-shadow:0 2px 4px rgba(0,0,0,0.1); z-index:1000; }
+  .topbar button { background:none; border:none; color:white; cursor:pointer; margin-left:10px; }
+  .container { padding:80px 20px 20px; font-family:'Segoe UI', sans-serif; }
+  .nav { margin-bottom:20px; }
+  .nav button { margin-right:8px; padding:8px 12px; border:none; background:#4f46e5; color:white; border-radius:6px; cursor:pointer; }
+  .nav button.active { background:#4338ca; }
+  table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+  th, td { border:1px solid #ccc; padding:8px; text-align:center; }
+  th { background:#f3f4f6; }
+</style>
+
+<div class="topbar" style="display: flex; align-items: center; gap: 10px;">
+    <button @onclick='() => Navigation.NavigateTo($"/home?usuario={Usuario}")' title="Volver" style="font-size: 1.2rem; cursor: pointer;">⬅️</button>
+    <div style="font-weight: bold; font-size: 1.2rem;">🍽 Dietas Semanales</div>
+</div>
+
+
+<div class="container">
+  <div class="nav">
+    @foreach (var kcal in niveles)
+    {
+      <button class="@(kcalSeleccionado == kcal ? "active" : "")" @onclick="() => kcalSeleccionado = kcal">
+        @kcal kcal
+      </button>
+    }
+  </div>
+
+  <h3>Dieta diaria de @kcalSeleccionado kcal</h3>
+
+  <table>
+    <thead>
+      <tr><th>Día</th><th>Desayuno</th><th>Almuerzo</th><th>Merienda</th><th>Cena</th><th>Total kcal</th></tr>
+    </thead>
+    <tbody>
+      @foreach (var dia in dietas[kcalSeleccionado].Days)
+      {
+        <tr>
+          <td>@dia.DiaName</td>
+          <td>@dia.DesayunoDesc</td>
+          <td>@dia.AlmuerzoDesc</td>
+          <td>@dia.MeriendaDesc</td>
+          <td>@dia.CenaDesc</td>
+          <td>@dia.TotalKcal</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
 
 @code {
+  private readonly int[] niveles = {1500,2000,2500,3000,3500};
+  private int kcalSeleccionado = 2000;
+  private Dictionary<int, WeeklyDiet> dietas = new();
+  private string Usuario => HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query).Get("usuario") ?? "";
 
+  protected override void OnInitialized()
+  {
+    dietas = new Dictionary<int, WeeklyDiet>
+    {
+      [1500] = new WeeklyDiet
+      {
+        Days = new List<DayMeal>
+        {
+          new()
+          {
+            DiaName = "Lunes",
+            DesayunoDesc = "Avena 40g + Leche 200ml + Plátano 100g → 350 kcal",
+            AlmuerzoDesc = "Pechuga pollo 120g + Arroz integral 80g + Ensalada 100g → 450 kcal",
+            MeriendaDesc = "Yogur natural 125g + Nueces 15g → 200 kcal",
+            CenaDesc = "Pescado blanco 150g + Verduras 200g → 500 kcal",
+            TotalKcal = 1500
+          },
+          new()
+          {
+            DiaName = "Martes",
+            DesayunoDesc = "Pan integral 50g + 2 Huevos + Tomate 50g → 350 kcal",
+            AlmuerzoDesc = "Lentejas 100g + Arroz 50g + Verduras 150g → 450 kcal",
+            MeriendaDesc = "Fruta (manzana 150g) + Almendras 15g → 200 kcal",
+            CenaDesc = "Merluza 150g + Patata 150g + Ensalada → 500 kcal",
+            TotalKcal = 1500
+          },
+          new()
+          {
+            DiaName = "Miércoles",
+            DesayunoDesc = "Copos de maíz 40g + Leche 200ml + Kiwi 100g → 350 kcal",
+            AlmuerzoDesc = "Pavo 120g + Quinoa 80g + Verduras 100g → 450 kcal",
+            MeriendaDesc = "Queso fresco 100g + Frutos secos 15g → 200 kcal",
+            CenaDesc = "Huevos revueltos 2 unidades + Espinacas 200g → 500 kcal",
+            TotalKcal = 1500
+          },
+          new()
+          {
+            DiaName = "Jueves",
+            DesayunoDesc = "Tostada integral 50g + Aguacate 50g + Huevo 1 unidad → 350 kcal",
+            AlmuerzoDesc = "Ternera magra 120g + Patata 150g + Ensalada → 450 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 100g → 200 kcal",
+            CenaDesc = "Salmón 150g + Verduras 200g → 500 kcal",
+            TotalKcal = 1500
+          },
+          new()
+          {
+            DiaName = "Viernes",
+            DesayunoDesc = "Avena 40g + Leche 200ml + Fresas 100g → 350 kcal",
+            AlmuerzoDesc = "Atún 120g + Arroz 80g + Verduras 100g → 450 kcal",
+            MeriendaDesc = "Yogur natural 125g + Nueces 15g → 200 kcal",
+            CenaDesc = "Pollo asado 150g + Verduras 200g → 500 kcal",
+            TotalKcal = 1500
+          },
+          new()
+          {
+            DiaName = "Sábado",
+            DesayunoDesc = "Pan integral 50g + Queso fresco 50g + Tomate 50g → 350 kcal",
+            AlmuerzoDesc = "Lentejas 100g + Arroz 50g + Verduras 150g → 450 kcal",
+            MeriendaDesc = "Fruta (pera 150g) + Almendras 15g → 200 kcal",
+            CenaDesc = "Merluza 150g + Patata 150g + Ensalada → 500 kcal",
+            TotalKcal = 1500
+          },
+          new()
+          {
+            DiaName = "Domingo",
+            DesayunoDesc = "Copos de avena 40g + Leche 200ml + Plátano 100g → 350 kcal",
+            AlmuerzoDesc = "Pavo 120g + Quinoa 80g + Verduras 100g → 450 kcal",
+            MeriendaDesc = "Queso fresco 100g + Frutos secos 15g → 200 kcal",
+            CenaDesc = "Huevos revueltos 2 unidades + Espinacas 200g → 500 kcal",
+            TotalKcal = 1500
+          }
+        }
+      },
+
+      [2000] = new WeeklyDiet
+      {
+        Days = new List<DayMeal>
+        {
+          new()
+          {
+            DiaName = "Lunes",
+            DesayunoDesc = "Pan integral 80g + 2 Huevos + Aguacate 50g → 500 kcal",
+            AlmuerzoDesc = "Ternera 150g + Quinoa 120g + Verduras 150g → 700 kcal",
+            MeriendaDesc = "Frutos rojos 150g + Almendras 20g → 300 kcal",
+            CenaDesc = "Salmón 150g + Patata 200g + Espinacas → 500 kcal",
+            TotalKcal = 2000
+          },
+          new()
+          {
+            DiaName = "Martes",
+            DesayunoDesc = "Copos avena 60g + Leche 250ml + Plátano 120g → 500 kcal",
+            AlmuerzoDesc = "Pechuga pollo 160g + Arroz integral 120g + Ensalada 150g → 700 kcal",
+            MeriendaDesc = "Yogur natural 150g + Nueces 20g → 300 kcal",
+            CenaDesc = "Merluza 180g + Patata 220g + Brócoli 150g → 500 kcal",
+            TotalKcal = 2000
+          },
+          new()
+          {
+            DiaName = "Miércoles",
+            DesayunoDesc = "Tostada integral 70g + Queso fresco 70g + Tomate 60g → 500 kcal",
+            AlmuerzoDesc = "Ternera magra 160g + Patata 220g + Verduras 150g → 700 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 120g → 300 kcal",
+            CenaDesc = "Salmón 160g + Espinacas 150g + Quinoa 80g → 500 kcal",
+            TotalKcal = 2000
+          },
+          new()
+          {
+            DiaName = "Jueves",
+            DesayunoDesc = "Avena 60g + Leche 250ml + Frutas 150g → 500 kcal",
+            AlmuerzoDesc = "Pavo 160g + Arroz integral 120g + Verduras 150g → 700 kcal",
+            MeriendaDesc = "Yogur natural 150g + Almendras 20g → 300 kcal",
+            CenaDesc = "Pescado blanco 160g + Patata 220g + Verduras 150g → 500 kcal",
+            TotalKcal = 2000
+          },
+          new()
+          {
+            DiaName = "Viernes",
+            DesayunoDesc = "Pan integral 80g + 2 Huevos + Aguacate 50g → 500 kcal",
+            AlmuerzoDesc = "Ternera 150g + Quinoa 120g + Verduras 150g → 700 kcal",
+            MeriendaDesc = "Frutos rojos 150g + Almendras 20g → 300 kcal",
+            CenaDesc = "Salmón 150g + Patata 200g + Espinacas → 500 kcal",
+            TotalKcal = 2000
+          },
+          new()
+          {
+            DiaName = "Sábado",
+            DesayunoDesc = "Copos avena 60g + Leche 250ml + Plátano 120g → 500 kcal",
+            AlmuerzoDesc = "Pechuga pollo 160g + Arroz integral 120g + Ensalada 150g → 700 kcal",
+            MeriendaDesc = "Yogur natural 150g + Nueces 20g → 300 kcal",
+            CenaDesc = "Merluza 180g + Patata 220g + Brócoli 150g → 500 kcal",
+            TotalKcal = 2000
+          },
+          new()
+          {
+            DiaName = "Domingo",
+            DesayunoDesc = "Tostada integral 70g + Queso fresco 70g + Tomate 60g → 500 kcal",
+            AlmuerzoDesc = "Ternera magra 160g + Patata 220g + Verduras 150g → 700 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 120g → 300 kcal",
+            CenaDesc = "Salmón 160g + Espinacas 150g + Quinoa 80g → 500 kcal",
+            TotalKcal = 2000
+          }
+        }
+      },
+
+      [2500] = new WeeklyDiet
+      {
+        Days = new List<DayMeal>
+        {
+          new()
+          {
+            DiaName = "Lunes",
+            DesayunoDesc = "Pan integral 100g + 3 Huevos + Aguacate 70g → 600 kcal",
+            AlmuerzoDesc = "Ternera 180g + Quinoa 150g + Verduras 200g → 900 kcal",
+            MeriendaDesc = "Frutos rojos 200g + Almendras 25g → 400 kcal",
+            CenaDesc = "Salmón 180g + Patata 250g + Espinacas → 600 kcal",
+            TotalKcal = 2500
+          },
+          new()
+          {
+            DiaName = "Martes",
+            DesayunoDesc = "Avena 80g + Leche 300ml + Plátano 150g → 600 kcal",
+            AlmuerzoDesc = "Pechuga pollo 200g + Arroz integral 150g + Ensalada 200g → 900 kcal",
+            MeriendaDesc = "Yogur natural 200g + Nueces 25g → 400 kcal",
+            CenaDesc = "Merluza 220g + Patata 300g + Brócoli 200g → 600 kcal",
+            TotalKcal = 2500
+          },
+          new()
+          {
+            DiaName = "Miércoles",
+            DesayunoDesc = "Tostada integral 90g + Queso fresco 90g + Tomate 80g → 600 kcal",
+            AlmuerzoDesc = "Ternera magra 200g + Patata 300g + Verduras 200g → 900 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 150g → 400 kcal",
+            CenaDesc = "Salmón 200g + Espinacas 200g + Quinoa 100g → 600 kcal",
+            TotalKcal = 2500
+          },
+          new()
+          {
+            DiaName = "Jueves",
+            DesayunoDesc = "Copos avena 80g + Leche 300ml + Frutas 200g → 600 kcal",
+            AlmuerzoDesc = "Pavo 200g + Arroz integral 150g + Verduras 200g → 900 kcal",
+            MeriendaDesc = "Yogur natural 200g + Almendras 25g → 400 kcal",
+            CenaDesc = "Pescado blanco 200g + Patata 300g + Verduras 200g → 600 kcal",
+            TotalKcal = 2500
+          },
+          new()
+          {
+            DiaName = "Viernes",
+            DesayunoDesc = "Pan integral 100g + 3 Huevos + Aguacate 70g → 600 kcal",
+            AlmuerzoDesc = "Ternera 180g + Quinoa 150g + Verduras 200g → 900 kcal",
+            MeriendaDesc = "Frutos rojos 200g + Almendras 25g → 400 kcal",
+            CenaDesc = "Salmón 180g + Patata 250g + Espinacas → 600 kcal",
+            TotalKcal = 2500
+          },
+          new()
+          {
+            DiaName = "Sábado",
+            DesayunoDesc = "Avena 80g + Leche 300ml + Plátano 150g → 600 kcal",
+            AlmuerzoDesc = "Pechuga pollo 200g + Arroz integral 150g + Ensalada 200g → 900 kcal",
+            MeriendaDesc = "Yogur natural 200g + Nueces 25g → 400 kcal",
+            CenaDesc = "Merluza 220g + Patata 300g + Brócoli 200g → 600 kcal",
+            TotalKcal = 2500
+          },
+          new()
+          {
+            DiaName = "Domingo",
+            DesayunoDesc = "Tostada integral 90g + Queso fresco 90g + Tomate 80g → 600 kcal",
+            AlmuerzoDesc = "Ternera magra 200g + Patata 300g + Verduras 200g → 900 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 150g → 400 kcal",
+            CenaDesc = "Salmón 200g + Espinacas 200g + Quinoa 100g → 600 kcal",
+            TotalKcal = 2500
+          }
+        }
+      },
+
+      [3000] = new WeeklyDiet
+      {
+        Days = new List<DayMeal>
+        {
+          new()
+          {
+            DiaName = "Lunes",
+            DesayunoDesc = "Pan integral 120g + 4 Huevos + Aguacate 100g → 750 kcal",
+            AlmuerzoDesc = "Ternera 220g + Quinoa 180g + Verduras 250g → 1000 kcal",
+            MeriendaDesc = "Frutos rojos 250g + Almendras 30g → 450 kcal",
+            CenaDesc = "Salmón 220g + Patata 350g + Espinacas → 800 kcal",
+            TotalKcal = 3000
+          },
+          new()
+          {
+            DiaName = "Martes",
+            DesayunoDesc = "Avena 100g + Leche 350ml + Plátano 180g → 750 kcal",
+            AlmuerzoDesc = "Pechuga pollo 240g + Arroz integral 180g + Ensalada 250g → 1000 kcal",
+            MeriendaDesc = "Yogur natural 250g + Nueces 30g → 450 kcal",
+            CenaDesc = "Merluza 270g + Patata 350g + Brócoli 250g → 800 kcal",
+            TotalKcal = 3000
+          },
+          new()
+          {
+            DiaName = "Miércoles",
+            DesayunoDesc = "Tostada integral 110g + Queso fresco 110g + Tomate 100g → 750 kcal",
+            AlmuerzoDesc = "Ternera magra 240g + Patata 350g + Verduras 250g → 1000 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 180g → 450 kcal",
+            CenaDesc = "Salmón 240g + Espinacas 250g + Quinoa 120g → 800 kcal",
+            TotalKcal = 3000
+          },
+          new()
+          {
+            DiaName = "Jueves",
+            DesayunoDesc = "Copos avena 100g + Leche 350ml + Frutas 250g → 750 kcal",
+            AlmuerzoDesc = "Pavo 240g + Arroz integral 180g + Verduras 250g → 1000 kcal",
+            MeriendaDesc = "Yogur natural 250g + Almendras 30g → 450 kcal",
+            CenaDesc = "Pescado blanco 240g + Patata 350g + Verduras 250g → 800 kcal",
+            TotalKcal = 3000
+          },
+          new()
+          {
+            DiaName = "Viernes",
+            DesayunoDesc = "Pan integral 120g + 4 Huevos + Aguacate 100g → 750 kcal",
+            AlmuerzoDesc = "Ternera 220g + Quinoa 180g + Verduras 250g → 1000 kcal",
+            MeriendaDesc = "Frutos rojos 250g + Almendras 30g → 450 kcal",
+            CenaDesc = "Salmón 220g + Patata 350g + Espinacas → 800 kcal",
+            TotalKcal = 3000
+          },
+          new()
+          {
+            DiaName = "Sábado",
+            DesayunoDesc = "Avena 100g + Leche 350ml + Plátano 180g → 750 kcal",
+            AlmuerzoDesc = "Pechuga pollo 240g + Arroz integral 180g + Ensalada 250g → 1000 kcal",
+            MeriendaDesc = "Yogur natural 250g + Nueces 30g → 450 kcal",
+            CenaDesc = "Merluza 270g + Patata 350g + Brócoli 250g → 800 kcal",
+            TotalKcal = 3000
+          },
+          new()
+          {
+            DiaName = "Domingo",
+            DesayunoDesc = "Tostada integral 110g + Queso fresco 110g + Tomate 100g → 750 kcal",
+            AlmuerzoDesc = "Ternera magra 240g + Patata 350g + Verduras 250g → 1000 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 180g → 450 kcal",
+            CenaDesc = "Salmón 240g + Espinacas 250g + Quinoa 120g → 800 kcal",
+            TotalKcal = 3000
+          }
+        }
+      },
+
+      [3500] = new WeeklyDiet
+      {
+        Days = new List<DayMeal>
+        {
+          new()
+          {
+            DiaName = "Lunes",
+            DesayunoDesc = "Pan integral 150g + 5 Huevos + Aguacate 120g → 900 kcal",
+            AlmuerzoDesc = "Ternera 280g + Quinoa 220g + Verduras 300g → 1200 kcal",
+            MeriendaDesc = "Frutos rojos 300g + Almendras 40g → 550 kcal",
+            CenaDesc = "Salmón 280g + Patata 400g + Espinacas → 850 kcal",
+            TotalKcal = 3500
+          },
+          new()
+          {
+            DiaName = "Martes",
+            DesayunoDesc = "Avena 120g + Leche 400ml + Plátano 200g → 900 kcal",
+            AlmuerzoDesc = "Pechuga pollo 280g + Arroz integral 220g + Ensalada 300g → 1200 kcal",
+            MeriendaDesc = "Yogur natural 300g + Nueces 40g → 550 kcal",
+            CenaDesc = "Merluza 320g + Patata 400g + Brócoli 300g → 850 kcal",
+            TotalKcal = 3500
+          },
+          new()
+          {
+            DiaName = "Miércoles",
+            DesayunoDesc = "Tostada integral 140g + Queso fresco 140g + Tomate 120g → 900 kcal",
+            AlmuerzoDesc = "Ternera magra 280g + Patata 400g + Verduras 300g → 1200 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 200g → 550 kcal",
+            CenaDesc = "Salmón 280g + Espinacas 300g + Quinoa 150g → 850 kcal",
+            TotalKcal = 3500
+          },
+          new()
+          {
+            DiaName = "Jueves",
+            DesayunoDesc = "Copos avena 120g + Leche 400ml + Frutas 300g → 900 kcal",
+            AlmuerzoDesc = "Pavo 280g + Arroz integral 220g + Verduras 300g → 1200 kcal",
+            MeriendaDesc = "Yogur natural 300g + Almendras 40g → 550 kcal",
+            CenaDesc = "Pescado blanco 280g + Patata 400g + Verduras 300g → 850 kcal",
+            TotalKcal = 3500
+          },
+          new()
+          {
+            DiaName = "Viernes",
+            DesayunoDesc = "Pan integral 150g + 5 Huevos + Aguacate 120g → 900 kcal",
+            AlmuerzoDesc = "Ternera 280g + Quinoa 220g + Verduras 300g → 1200 kcal",
+            MeriendaDesc = "Frutos rojos 300g + Almendras 40g → 550 kcal",
+            CenaDesc = "Salmón 280g + Patata 400g + Espinacas → 850 kcal",
+            TotalKcal = 3500
+          },
+          new()
+          {
+            DiaName = "Sábado",
+            DesayunoDesc = "Avena 120g + Leche 400ml + Plátano 200g → 900 kcal",
+            AlmuerzoDesc = "Pechuga pollo 280g + Arroz integral 220g + Ensalada 300g → 1200 kcal",
+            MeriendaDesc = "Yogur natural 300g + Nueces 40g → 550 kcal",
+            CenaDesc = "Merluza 320g + Patata 400g + Brócoli 300g → 850 kcal",
+            TotalKcal = 3500
+          },
+          new()
+          {
+            DiaName = "Domingo",
+            DesayunoDesc = "Tostada integral 140g + Queso fresco 140g + Tomate 120g → 900 kcal",
+            AlmuerzoDesc = "Ternera magra 280g + Patata 400g + Verduras 300g → 1200 kcal",
+            MeriendaDesc = "Batido proteína + Plátano 200g → 550 kcal",
+            CenaDesc = "Salmón 280g + Espinacas 300g + Quinoa 150g → 850 kcal",
+            TotalKcal = 3500
+          }
+        }
+      }
+    };
+  }
+
+  private class WeeklyDiet
+  {
+    public List<DayMeal> Days { get; set; } = new();
+  }
+
+  private class DayMeal
+  {
+    public string DiaName { get; set; } = "";
+    public string DesayunoDesc { get; set; } = "";
+    public string AlmuerzoDesc { get; set; } = "";
+    public string MeriendaDesc { get; set; } = "";
+    public string CenaDesc { get; set; } = "";
+    public int TotalKcal { get; set; }
+  }
 }

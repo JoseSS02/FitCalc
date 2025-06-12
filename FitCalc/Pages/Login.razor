@@ -197,7 +197,8 @@
             return;
         }
 
-        // Todo correcto, redirigir
+        await DbService.EliminarMacronutrientesAntiguosAsync(loginUsername);
+        // Todo correcto
         Navigation.NavigateTo($"/home?usuario={Uri.EscapeDataString(loginUsername)}");
 
     }
