@@ -136,6 +136,34 @@
             transform: scale(1.05);
             box-shadow: 0 12px 25px rgba(99, 102, 241, 0.5);
         }
+
+    .alimentos-section {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        margin-top: 40px;
+    }
+
+        .alimentos-section h3 {
+            margin-bottom: 15px;
+            color: #1e3a8a;
+        }
+
+    .lista-alimentos {
+        list-style-type: none;
+        padding-left: 0;
+    }
+
+        .lista-alimentos li {
+            background-color: #f3f4f6;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: #111827;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
 </style>
 
 <div class="layout">
@@ -179,6 +207,22 @@
             </div>
         </div>
 
+
+
+        @if (!string.IsNullOrWhiteSpace(alimentosDelDia))
+        {
+            <div class="alimentos-section">
+                <h3>🍱 Alimentos consumidos hoy</h3>
+                <ul class="lista-alimentos">
+                    @foreach (var alimento in alimentosDelDia.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <li>@alimento</li>
+                    }
+                </ul>
+            </div>
+        }
+
+
         <div class="actions">
             <button class="fancy-button" @onclick="GoToAddFood">🍽️ Añadir Alimento</button>
         </div>
@@ -198,6 +242,8 @@
     private float maxProteins = 1;
     private float maxFats = 1;
     private int caloriasNecesarias = 0;
+
+    private string alimentosDelDia = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -234,6 +280,7 @@
             carbs = macroDatos.Hidratos;
             proteins = macroDatos.Proteinas;
             fats = macroDatos.Grasas;
+            alimentosDelDia = macroDatos.Alimentos ?? string.Empty;
         }
     }
 

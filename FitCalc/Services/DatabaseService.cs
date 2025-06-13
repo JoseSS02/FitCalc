@@ -251,7 +251,7 @@ public class DatabaseService
 
         var selectCmd = connection.CreateCommand();
         selectCmd.CommandText = @"
-        SELECT Calorias, Grasas, Hidratos, Proteinas 
+        SELECT Calorias, Grasas, Hidratos, Proteinas, Alimentos
         FROM macronutrientes 
         WHERE Usuario = @usuario AND Dia = @dia";
         selectCmd.Parameters.AddWithValue("@usuario", usuario);
@@ -268,6 +268,7 @@ public class DatabaseService
                 Grasas = reader.GetFloat(1),
                 Hidratos = reader.GetFloat(2),
                 Proteinas = reader.GetFloat(3),
+                Alimentos = reader.IsDBNull(4) ? "" : reader.GetString(4),
                 Dia = hoy
             };
         }
@@ -277,8 +278,8 @@ public class DatabaseService
         // Si no existe el registro, lo insertamos con valores en cero
         var insertCmd = connection.CreateCommand();
         insertCmd.CommandText = @"
-        INSERT INTO macronutrientes (Usuario, Calorias, Grasas, Hidratos, Proteinas, Dia)
-        VALUES (@usuario, 0, 0, 0, 0, @dia)";
+        INSERT INTO macronutrientes (Usuario, Calorias, Grasas, Hidratos, Proteinas, Alimentos, Dia)
+        VALUES (@usuario, 0, 0, 0, 0, '', @dia)";
         insertCmd.Parameters.AddWithValue("@usuario", usuario);
         insertCmd.Parameters.AddWithValue("@dia", hoy);
         await insertCmd.ExecuteNonQueryAsync();
@@ -290,9 +291,11 @@ public class DatabaseService
             Grasas = 0,
             Hidratos = 0,
             Proteinas = 0,
+            Alimentos = "",
             Dia = hoy
         };
     }
+
 
 
     public async Task ActualizarMacrosUsuarioAsync(string nombreUsuario, int calorias, float proteinas, float grasas, float hidratos)
