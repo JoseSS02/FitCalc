@@ -296,7 +296,33 @@ public class DatabaseService
         };
     }
 
+    public async Task<Macronutrientes?> ObtenerMacronutrientesPorFechaAsync(string usuario, DateTime fecha)
+    {
+        using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
 
+        var query = @"SELECT Hidratos, Proteinas, Grasas, Alimentos 
+                  FROM macronutrientes 
+                  WHERE Usuario = @usuario AND Fecha = @fecha";
+
+        using var command = new MySqlCommand(query, connection);
+        command.Parameters.AddWithValue("@usuario", usuario);
+        command.Parameters.AddWithValue("@fecha", fecha.Date); // Asegura que sea solo la fecha
+
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            return new Macronutrientes
+            {
+                Hidratos = reader.GetFloat("Hidratos"),
+                Proteinas = reader.GetFloat("Proteinas"),
+                Grasas = reader.GetFloat("Grasas"),
+                Alimentos = reader.IsDBNull(reader.GetOrdinal("Alimentos")) ? "" : reader.GetString("Alimentos")
+            };
+        }
+
+        return null;
+    }
 
     public async Task ActualizarMacrosUsuarioAsync(string nombreUsuario, int calorias, float proteinas, float grasas, float hidratos)
     {
@@ -376,8 +402,6 @@ public class DatabaseService
 
         await updateCmd.ExecuteNonQueryAsync();
     }
-
-
 
     public async Task EliminarMacronutrientesAntiguosAsync(string usuario)
     {

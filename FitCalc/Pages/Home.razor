@@ -301,7 +301,8 @@
         var diaSemana = DateTime.Now.ToString("dddd", new System.Globalization.CultureInfo("es-ES"));
         var fechaCompleta = $"{diaSemana}, {DateTime.Now:dd/MM/yyyy}";
 
-        var contenido = $"📝 Informe de alimentos del día - {fechaCompleta}\n\n";
+        // Solo el listado de alimentos (sin cabecera ni fecha)
+        var contenido = "";
         foreach (var alimento in alimentosDelDia.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             contenido += $"- {alimento}\n";
@@ -309,11 +310,14 @@
 
         contenido += $"\n🔥 Calorías totales consumidas: {totalCalories} kcal";
 
-        byte[] pdfBytes = PdfHelper.CrearPdfDesdeTexto(contenido);
+        // Pasamos contenido y fecha al helper que se encarga de la cabecera y formato
+        byte[] pdfBytes = PdfHelper.CrearPdfDesdeTexto(contenido, fechaCompleta);
+
         string base64 = Convert.ToBase64String(pdfBytes);
 
         await JS.InvokeVoidAsync("descargarArchivo", $"InformeAlimentos_{DateTime.Today:yyyyMMdd}.pdf", base64);
     }
+
 
 
 
